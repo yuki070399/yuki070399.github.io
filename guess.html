@@ -1,1 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>猜數字小遊戲</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background-color: #f7f7ff;
+      margin-top: 100px;
+    }
 
+    h1 {
+      color: #333;
+    }
+
+    input {
+      font-size: 20px;
+      padding: 10px;
+      width: 100px;
+      text-align: center;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #message {
+      font-size: 22px;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #count {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎯 猜數字小遊戲</h1>
+  <p>我心中想了一個 1 ～ 100 的數字，你來猜猜看！</p>
+
+  <input type="number" id="guessInput" placeholder="輸入數字">
+  <br>
+
+  <button onclick="checkGuess()">猜！</button>
+  <button onclick="resetGame()">重新開始</button>
+
+  <div id="message"></div>
+  <div id="count">猜的次數：0</div>
+
+  <script>
+    let answer = Math.floor(Math.random() * 100) + 1;
+    let times = 0;
+
+    function checkGuess() {
+      let userGuess = Number(document.getElementById("guessInput").value);
+      times++;
+
+      if (userGuess > answer) {
+        document.getElementById("message").innerText = "⬆ 太大了！";
+      } else if (userGuess < answer) {
+        document.getElementById("message").innerText = "⬇ 太小了！";
+      } else {
+        document.getElementById("message").innerText = "🎉 猜對了！答案就是 " + answer;
+      }
+
+      document.getElementById("count").innerText = "猜的次數：" + times;
+      document.getElementById("guessInput").value = "";
+    }
+
+    function resetGame() {
+      answer = Math.floor(Math.random() * 100) + 1;
+      times = 0;
+      document.getElementById("message").innerText = "遊戲已重新開始！";
+      document.getElementById("count").innerText = "猜的次數：0";
+      document.getElementById("guessInput").value = "";
+    }
+  </script>
+
+</body>
+</html>
