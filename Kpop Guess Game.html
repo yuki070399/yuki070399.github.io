@@ -288,11 +288,30 @@ startNewRound();
     }
 
     function checkAnswer(choice) {
-      if (choice === roundQuestions[qIndex].name) score++;
-      qIndex++;
+      const correct = roundQuestions[qIndex].name;
+      let message = "";
 
-      if (qIndex >= 10) {
-        endGame();
+      if (choice === correct) {
+        score++;
+        message = `✔️ 你答對了！正確答案是：${correct}`;
+      } else {
+        message = `❌ 可惜！你選的是：${choice}<br>正確答案是：${correct}`;
+      }
+
+      document.getElementById("result").innerHTML = `<p>${message}</p>`;
+
+      qIndex++;
+      setTimeout(() => {
+        if (qIndex >= 10) {
+          endGame();
+        } else {
+          document.getElementById("result").innerHTML = "";
+          loadQuestion();
+        }
+      }, 1200);
+    }
+
+    function endGame()();
       } else {
         loadQuestion();
       }
