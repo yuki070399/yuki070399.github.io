@@ -289,8 +289,11 @@ startNewRound();
 
     function checkAnswer(choice) {
       const correct = roundQuestions[qIndex].name;
-      let message = "";
 
+      // 確保先清空選項，不要讓玩家再按
+      document.getElementById("options").innerHTML = "";
+
+      let message = "";
       if (choice === correct) {
         score++;
         message = `✔️ 你答對了！正確答案是：${correct}`;
@@ -298,9 +301,13 @@ startNewRound();
         message = `❌ 可惜！你選的是：${choice}<br>正確答案是：${correct}`;
       }
 
+      // 直接顯示答案（這段會留在畫面上 1.2 秒）
       document.getElementById("result").innerHTML = `<p>${message}</p>`;
 
+      // 進入下一題
       qIndex++;
+
+      // 延遲 1.2 秒再切題目（這是重點！）
       setTimeout(() => {
         if (qIndex >= 10) {
           endGame();
@@ -308,10 +315,10 @@ startNewRound();
           document.getElementById("result").innerHTML = "";
           loadQuestion();
         }
-      }, 1200);
+      }, 1500); // 延長到 1.5 秒，讓你一定看得到
     }
 
-    function endGame()();
+    function endGame()()();
       } else {
         loadQuestion();
       }
