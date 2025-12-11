@@ -58,6 +58,7 @@
   <h2>K-pop 成員猜謎</h2>
   <div id="questionBox"></div>
   <div id="options"></div>
+  <div id="result"></div>
   <div id="roundResult"></div>
   <button id="nextRoundBtn">再玩一回合</button>
 </div>
@@ -308,17 +309,17 @@ startNewRound();
       qIndex++;
 
       // 延遲 1.2 秒再切題目（這是重點！）
-      setTimeout(() => {
-        if (qIndex >= 10) {
-          endGame();
-        } else {
-          document.getElementById("result").innerHTML = "";
-          loadQuestion();
-        }
-      }, 1500); // 延長到 1.5 秒，讓你一定看得到
+     setTimeout(() => {
+    if (qIndex >= 10) {
+        endGame();
+    } else {
+        loadQuestion();  // 換題
+        document.getElementById("result").innerHTML = ""; // 換題後再清空
     }
+}, 1500);
 
-    function endGame()()();
+
+  function endGame()()();
       } else {
         loadQuestion();
       }
