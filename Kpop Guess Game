@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-pop 成員猜謎遊戲</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      padding: 20px;
+      text-align: center;
+    }
+    #gameBox {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .option {
+      display: block;
+      width: 90%;
+      margin: 8px auto;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      cursor: pointer;
+      background: #f3f4f6;
+    }
+    .option:hover {
+      background: #e5e7eb;
+    }
+    #roundResult {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 10px;
+      display: none;
+    }
+    #nextRoundBtn {
+      display: none;
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background: #3b82f6;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameBox">
+  <h2>K-pop 成員猜謎</h2>
+  <div id="questionBox"></div>
+  <div id="options"></div>
+  <div id="roundResult"></div>
+  <button id="nextRoundBtn">再玩一回合</button>
+</div>
+
+<script>
+// --- 超大型 K-pop 題庫（示範） ---
+// 你之後可以加更多團與成員
+// 每位包含：名字、出道年、身份、國家、舞台風格
+
+const members = [
+  {name: "Wonyoung", year: 2021, role: "主唱", nation: "韓國", style: "可愛", group: "IVE"},
+  {name: "Yujin", year: 2021, role: "隊長", nation: "韓國", style: "清爽", group: "IVE"},
+  {name: "Miyeon", year: 2018, role: "主唱", nation: "韓國", style: "魅力", group: "I-DLE"},
+  {name: "Yuqi", year: 2018, role: "主唱", nation: "中國", style: "強勢", group: "I-DLE"},
+  {name: "Karina", year: 2020, role: "隊長", nation: "韓國", style: "帥氣", group: "aespa"},
+  {name: "Winter", year: 2020, role: "主唱", nation: "韓國", style: "清冷", group: "aespa"},
+  {name: "Jennie", year: 2016, role: "Rapper", nation: "韓國", style: "強勢", group: "BLACKPINK"},
+  {name: "Lisa", year: 2016, role: "舞者", nation: "泰國", style: "帥氣", group: "BLACKPINK"}
+];
+
+let roundQuestions = [];
+let currentIndex = 0;
+let score = 0;
+
+function startNewRound() {
+  score = 0;
+  currentIndex = 0;
+  roundQuestions = [];
+
+  // 隨機抽 10 題
+  const pool = [...members];
+  for (let i = 0; i < 10; i++) {
+    const pick = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    roundQuestions.push(pick);
+  }
+
+  document.getElementById('roundResult').style.display = 'none';
+  document.getElementById('nextRoundBtn').style.display = 'none';
+
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = roundQuestions[currentIndex];
+
+  const questionHTML = `
+    <h3>第 ${currentIndex + 1} 題</h3>
+    <p>出道年份：${q.year}</p>
+    <p>身份：${q.role}</p>
+    <p>國家：${q.nation}</p>
+    <p>舞台風格：${q.style}</p>
+  `;
+
+  document.getElementById('questionBox').innerHTML = questionHTML;
+
+  // 四選項
+  const optionsBox = document.getElementById('options');
+  optionsBox.innerHTML = "";
+
+  const optionPool = [...members];
+
+  // 正確答案
+  const correct = q;
+
+  // 放入正確答案以外，抽 3 個錯的
+  const wrongs = optionPool
+    .filter(m => m.name !== correct.name)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
+
+  let allOptions = [correct, ...wrongs].sort(() => Math.random() - 0.5);
+
+  allOptions.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerText = opt.name;
+
+    btn.onclick = () => {
+      if (opt.name === correct.name) score++;
+
+      currentIndex++;
+      if (currentIndex < 10) {
+        showQuestion();
+      } else {
+        showRoundResult(score);
+      }
+    };
+
+    optionsBox.appendChild(btn);
+  });
+}
+
+// 三段式結果顯示
+function showRoundResult(score) {
+  const container = document.getElementById('roundResult');
+  const nextBtn = document.getElementById('nextRoundBtn');
+
+  container.style.display = 'block';
+  nextBtn.style.display = 'inline-block';
+
+  if (score <= 3) {
+    container.innerHTML = `<div style="font-size:18px;">🙂 沒關係！你答對了 ${score}/10，下回合再挑戰吧！</div>`;
+    container.style.background = '#f3f4f6';
+    container.style.border = '1px solid #d1d5db';
+
+  } else if (score <= 7) {
+    container.innerHTML = `<div style="font-size:18px;">✨ 不錯喔！你答對了 ${score}/10 — 你離 K-pop 達人越來越近了！</div>`;
+    container.style.background = '#eef2ff';
+    container.style.border = '1px solid #c7d2fe';
+
+  } else {
+    container.innerHTML = `<div style="font-size:20px; font-weight:700; color:#b45309;">🔥 太強了！你答對了 ${score}/10 — K-pop 大師等級！</div>`;
+    container.style.background = 'linear-gradient(90deg,#fff7ed,#fffbeb)';
+    container.style.border = '1px solid #fcd34d';
+  }
+}
+
+startNewRound();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-pop 成員猜謎遊戲</title>
+  <style>
+    body {
+      font-family: "Arial";
+      background:#f7f7ff;
+      padding:20px;
+    }
+    .container {
+      max-width:600px;
+      margin:auto;
+      background:white;
+      padding:20px;
+      border-radius:16px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      width:100%;
+      padding:12px;
+      margin:6px 0;
+      border:none;
+      border-radius:10px;
+      background:#d7d9ff;
+      cursor:pointer;
+      font-size:16px;
+    }
+    button:hover {
+      background:#c3c6ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>K-pop 成員猜謎</h2>
+    <div id="question"></div>
+    <div id="options"></div>
+    <div id="result"></div>
+    <button onclick="startGame()">開始新回合</button>
+  </div>
+
+  <script>
+    const data = [
+      // ===== 範例題（你之後可以增加） =====
+      {
+        name: "Karina",
+        group: "aespa",
+        debut: "2020",
+        role: "隊長 / 主舞 / 副唱",
+        country: "韓國",
+        vibe: "強勢未來感舞台",
+        options: ["Karina", "Winter", "Ningning", "Giselle"]
+      },
+      {
+        name: "Wonyoung",
+        group: "IVE",
+        debut: "2021",
+        role: "Center / 主唱",
+        country: "韓國",
+        vibe: "高級感舞台魅力",
+        options: ["Yujin", "Wonyoung", "Liz", "Leeseo"]
+      }
+    ];
+
+    let score = 0;
+    let qIndex = 0;
+    let roundQuestions = [];
+
+    function startGame() {
+      score = 0;
+      qIndex = 0;
+      roundQuestions = [];
+      document.getElementById("result").innerHTML = "";
+
+      // 隨機抽 10 題
+      for (let i = 0; i < 10; i++) {
+        const rand = data[Math.floor(Math.random() * data.length)];
+        roundQuestions.push(rand);
+      }
+
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const q = roundQuestions[qIndex];
+      document.getElementById("question").innerHTML = `
+        <h3>第 ${qIndex + 1} 題</h3>
+        <p><b>出道年份：</b> ${q.debut}</p>
+        <p><b>身份：</b> ${q.role}</p>
+        <p><b>國家：</b> ${q.country}</p>
+        <p><b>舞台風格：</b> ${q.vibe}</p>
+      `;
+
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+
+      q.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(opt);
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(choice) {
+      if (choice === roundQuestions[qIndex].name) score++;
+      qIndex++;
+
+      if (qIndex >= 10) {
+        endGame();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    function endGame() {
+      let msg = "";
+      if (score <= 3) msg = `🙂 沒關係！你答對了 ${score}/10，下回合再來挑戰吧！`;
+      else if (score <= 7) msg = `✨ 不錯喔！你答對了 ${score}/10 — 你離 K-pop 達人越來越近了！`;
+      else msg = `🔥 太強了！你答對了 ${score}/10 — K-pop 大師等級！`;
+
+      document.getElementById("result").innerHTML = `<h3>${msg}</h3>`;
+      document.getElementById("question").innerHTML = "";
+      document.getElementById("options").innerHTML = "";
+    }
+  </script>
+</body>
+</html>
