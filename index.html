@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>K-pop 成員猜謎</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      padding: 20px;
+      text-align: center;
+    }
+    #gameBox {
+      max-width: 480px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .option {
+      display: block;
+      width: 90%;
+      margin: 8px auto;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      cursor: pointer;
+      background: #f3f4f6;
+    }
+    .option:hover {
+      background: #e5e7eb;
+    }
+    #result {
+      margin-top: 15px;
+      font-size: 18px;
+      min-height: 40px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="gameBox">
+  <h2>K-pop 成員猜謎</h2>
+  <div id="questionBox"></div>
+  <div id="options"></div>
+  <div id="result"></div>
+</div>
+
+<script>
+/* ===== 題庫（可自行增加，至少 10 位） ===== */
+const members = [
+  { name:"Karina", year:2020, role:"隊長", nation:"韓國", style:"未來感" },
+  { name:"Winter", year:2020, role:"主唱", nation:"韓國", style:"清冷" },
+  { name:"Ningning", year:2020, role:"主唱", nation:"中國", style:"爆發力" },
+  { name:"Giselle", year:2020, role:"Rapper", nation:"日本", style:"帥氣" },
+
+  { name:"Wonyoung", year:2021, role:"Center", nation:"韓國", style:"高級感" },
+  { name:"Yujin", year:2021, role:"隊長", nation:"韓國", style:"清爽" },
+  { name:"Liz", year:2021, role:"主唱", nation:"韓國", style:"溫柔" },
+  { name:"Leeseo", year:2021, role:"忙內", nation:"韓國", style:"可愛" },
+
+  { name:"Jennie", year:2016, role:"Rapper", nation:"韓國", style:"強勢" },
+  { name:"Lisa", year:2016, role:"舞者", nation:"泰國", style:"帥氣" },
+  { name:"Jisoo", year:2016, role:"主唱", nation:"韓國", style:"優雅" },
+  { name:"Rosé", year:2016, role:"主唱", nation:"韓國", style:"感性" }
+];
+
+let questions = []; // 本回合 10 題（完全不重複）
+let index = 0;
+let score = 0;
+
+/* ===== 開始遊戲 ===== */
+startGame();
+
+function startGame() {
+  if (members.length < 10) {
+    alert("成員數量不足 10 位，請先增加題庫");
+    return;
+  }
+
+  // ⭐ 一次洗牌 → 取 10 題（完全不重複）
+  questions = [...members]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 10);
+
+  index = 0;
+  score = 0;
+  loadQuestion();
+}
+
+/* ===== 顯示題目 ===== */
+function loadQuestion() {
+  const q = questions[index];
+
+  document.getElementById("questionBox").innerHTML = `
+    <h3>第 ${index + 1} 題</h3>
+    <p>出道年份：${q.year}</p>
+    <p>身份：${q.role}</p>
+    <p>國家：${q.nation}</p>
+    <p>舞台風格：${q.style}</p>
+  `;
+
+  // 錯誤選項（不重複、不含正解）
+  const wrongOptions = members
+    .filter(m => m.name !== q.name)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
+
+  const allOptions = [q, ...wrongOptions]
+    .sort(() => Math.random() - 0.5);
+
+  const box = document.getElementById("options");
+  box.innerHTML = "";
+
+  allOptions.forEach(m => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.innerText = m.name;
+    btn.onclick = () => checkAnswer(m.name);
+    box.appendChild(btn);
+  });
+}
+
+/* ===== 答題：立刻顯示對錯 ===== */
+function checkAnswer(choice) {
+  const correct = questions[index].name;
+
+  // 鎖住選項
+  document.getElementById("options").innerHTML = "";
+
+  if (choice === correct) {
+    score++;
+    document.getElementById("result").innerHTML =
+      `✔️ 答對了！正確答案是：<b>${correct}</b>`;
+  } else {
+    document.getElementById("result").innerHTML =
+      `❌ 答錯了！正確答案是：<b>${correct}</b>`;
+  }
+
+  // 1.5 秒後換題
+  setTimeout(() => {
+    index++;
+    if (index >= 10) {
+      endGame();
+    } else {
+      document.getElementById("result").innerHTML = "";
+      loadQuestion();
+    }
+  }, 1500);
+}
+
+/* ===== 結算 ===== */
+function endGame() {
+  let msg = "";
+  if (score <= 3)
+    msg = `🙂 你答對 ${score}/10，再加油！`;
+  else if (score <= 7)
+    msg = `✨ 你答對 ${score}/10，很不錯！`;
+  else
+    msg = `🔥 你答對 ${score}/10，K-pop 大師！`;
+
+  document.getElementById("questionBox").innerHTML = "";
+  document.getElementById("options").innerHTML = "";
+  document.getElementById("result").innerHTML = `
+    <h3>${msg}</h3>
+    <button class="option" onclick="startGame()">再玩一回合</button>
+  `;
+}
+</script>
+
+</body>
+</html>
+
