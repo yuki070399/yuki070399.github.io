@@ -4,6 +4,24 @@ DOCTYPE html>
 <meta charset="UTF-8">
 <title>可愛俄羅斯方塊</title>
 <style>
+  canvas {
+  border: 6px solid #aaa;
+  transition: 0.3s;
+}
+
+canvas.danger {
+  border-color: red;
+  box-shadow: 0 0 30px red;
+  animation: shake 0.3s infinite;
+}
+
+@keyframes shake {
+  0% { transform: translate(0); }
+  25% { transform: translate(2px, 0); }
+  50% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+  100% { transform: translate(0); }
+}
 body{
   margin:0;
   background:#fff7ed;
@@ -192,6 +210,12 @@ function draw(){
 }
 
 let dropCounter=0,last=0;
+  const dangerLine = 10;
+const isDanger = arena
+  .slice(0, dangerLine)
+  .some(row => row.some(v => v !== 0));
+
+canvas.classList.toggle("danger", isDanger);
 
 function update(t=0){
   const delta=t-last; last=t;
