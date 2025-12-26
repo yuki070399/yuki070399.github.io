@@ -1,1 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>可愛俄羅斯方塊</title>
 
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #ffe6f0, #e6f7ff);
+    font-family: "Arial Rounded MT Bold", Arial;
+  }
+
+  .game {
+    text-align: center;
+  }
+
+  h1 {
+    color: #ff6fae;
+    margin-bottom: 10px;
+  }
+
+  #score {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #555;
+  }
+
+  canvas {
+    background: #fff;
+    border: 6px solid #ffb6d5;
+    border-radius: 12px;
+    transition: 0.3s;
+  }
+
+  canvas.danger {
+    border-color: #ff4d4d;
+    box-shadow: 0 0 25px #ff4d4d;
+    animation: shake 0.3s infinite;
+  }
+
+  @keyframes shake {
+    0% { transform: translate(0); }
+    25% { transform: translate(3px, 0); }
+    50% { transform: translate(-3px, 0); }
+    75% { transform: translate(3px, 0); }
+    100% { transform: translate(0); }
+  }
+
+  .tip {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+  }
+</style>
+</head>
+
+<body>
+<div class="game">
+  <h1>🧸 可愛俄羅斯方塊</h1>
+  <div id="score">分數：0</div>
+  <canvas id="tetris" width="200" height="400"></canvas>
+  <div class="tip">← → 移動　↑ 旋轉　↓ 加速</div>
+</div>
+
+<script>
+const canvas = document.getElementById("tetris");
+const ctx = canvas.getContext("2d");
+ctx.scale(20, 20);
+
+const scoreEl = document.getElementById("score");
+
+const colors = [
+  null,
+  "#ffb6c1",
+  "#ffd966",
+  "#9ee7e3",
+  "#cdb4db",
+  "#a0c4ff",
+  "#ffc6ff",
+  "#b9fbc0"
+];
+
+const arena = createMatrix(10, 20);
+
+const player = {
+  pos: {x: 0, y: 0},
+  matrix: null,
+  score: 0
+};
+
+function createMatrix(w, h) {
+  const matrix = [];
+  while (h--) matrix.push(new Array(w).fill(0));
+  return matrix;
+}
+
+function createPiece(type) {
+  if (type === "T") return [[0,0,0],[1,1,1],[0,1,0]];
+  if (type === "O") return [[2,2],[2,2]];
+  if (type === "L") return [[0,3,0],[0,3,0],[0,3,3]];
+  if (type === "J") return [[0,4,0],[0,4,0],[4,4,0]];
+  if (type === "I") return [[0,5,0,0],[0,5,0,0],[0,5,0,0],[0,5,0,0]];
+  if (type === "S") return [[0,6,6],[6,6,0],[0,0,0]];
+  if (type === "Z") return [[7,7,0],[0,7,7],[0,0,0]];
+}
+
+function drawMatrix(matrix, offset) {
+  matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        ctx.fillStyle = colors[value];
+        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+      }
+    });
+  });
+}
+
+function collide(arena, player) {
+  const m = player.matrix;
+  const o = player.pos;
+  for (let y = 0; y < m.length; y++) {
+    for (let x = 0; x < m[y].length; x++) {
+      if (m[y][x] !== 0 &&
+         (arena[y + o.y] &&
+          arena[y + o.y][x + o.x]) !== 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function merge(arena, player) {
+  player.matrix.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value !== 0) {
+        arena[y + player.pos.y][x + player.pos.x] = value;
+      }
+    });
+  });
+}
+
+function arenaSweep() {
+  let rowCount = 1;
+  outer: for (let y = arena.length - 1; y >= 0; y--) {
+    for (let x = 0; x < arena[y].length; x++) {
+      if (arena[y][x] === 0) continue outer;
+    }
+    const row = arena.splice(y, 1)[0].fill(0);
+    arena.unshift(row);
+    y++;
+    player.score += rowCount * 10;
+    rowCount *= 2;
+  }
+}
+
+function rotate(matrix) {
+  for (let y = 0; y < matrix.length; y++) {
+    for (let x = 0; x < y; x++) {
+      [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+    }
+  }
+  matrix.forEach(row => row.reverse());
+}
+
+function playerDrop() {
+  player.pos.y++;
+  if (collide(arena, player)) {
+    player.pos.y--;
+    merge(arena, player);
+    playerReset();
+    arenaSweep();
+    updateScore();
+  }
+  dropCounter = 0;
+}
+
+function playerMove(dir) {
+  player.pos.x += dir;
+  if (collide(arena, player)) player.pos.x -= dir;
+}
+
+function playerReset() {
+  const pieces = "TJLOSZI";
+  player.matrix = createPiece(pieces[Math.floor(Math.random() * pieces.length)]);
+  player.pos.y = 0;
+  player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+
+  if (collide(arena, player)) {
+    arena.forEach(row => row.fill(0));
+    player.score = 0;
+    updateScore();
+  }
+}
+
+function updateScore() {
+  scoreEl.innerText = "分數：" + player.score;
+}
+
+let dropCounter = 0;
+let dropInterval = 800;
+let lastTime = 0;
+
+function update(time = 0) {
+  const deltaTime = time - lastTime;
+  lastTime = time;
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) playerDrop();
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMatrix(arena, {x:0,y:0});
+  drawMatrix(player.matrix, player.pos);
+
+  // 危險警告（快頂到）
+  canvas.classList.toggle("danger", player.pos.y < 2);
+
+  requestAnimationFrame(update);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") playerMove(-1);
+  if (e.key === "ArrowRight") playerMove(1);
+  if (e.key === "ArrowDown") playerDrop();
+  if (e.key === "ArrowUp") rotate(player.matrix);
+});
+
+playerReset();
+updateScore();
+update();
+</script>
+</body>
+</html>
