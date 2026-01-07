@@ -12,36 +12,52 @@
   }
   canvas {
     background: #f2f2f2;
-    margin-top: 20px;
     border: 3px solid #666;
+    display: block;
+    margin: 20px auto;
+  }
+  button {
+    padding: 10px 18px;
+    font-size: 16px;
+    margin: 5px;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
 
 <h1>🧱 俄羅斯方塊</h1>
-<p>方向鍵操作，上旋轉，空白鍵瞬間落下</p>
+
+<p>
+  分數：<span id="score">0</span>　
+  等級：<span id="level">1</span>
+</p>
+
+<button id="startBtn">開始遊戲</button>
+<button id="restartBtn" style="display:none;">再來一局</button>
+
 <canvas id="game" width="240" height="400"></canvas>
+
+<h2 id="gameOver" style="display:none;">💀 遊戲結束</h2>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
 const blockSize = 20;
 const cols = 12;
 const rows = 20;
-
 ctx.scale(blockSize, blockSize);
 
-// 冷色系顏色
 const colors = [
   null,
-  "#4FC3F7", // 淺藍
-  "#1E88E5", // 深藍
-  "#81D4FA", // 天藍
-  "#B39DDB", // 淺紫
-  "#4DB6AC", // 青綠
-  "#7986CB", // 藍紫
-  "#90CAF9"  // 淡藍
+  "#4FC3F7",
+  "#1E88E5",
+  "#81D4FA",
+  "#B39DDB",
+  "#4DB6AC",
+  "#7986CB",
+  "#90CAF9"
 ];
 
 const shapes = [
@@ -59,12 +75,28 @@ function createMatrix(w, h) {
   return Array.from({length: h}, () => Array(w).fill(0));
 }
 
-const arena = createMatrix(cols, rows);
+let arena, player;
+let score = 0;
+let level = 1;
+let dropInterval = 500;
+let lastTime = 0;
+let running = false;
 
-const player = {
-  pos: {x: 0, y: 0},
-  matrix: null
-};
+const scoreEl = document.getElementById("score");
+const levelEl = document.getElementById("level");
+const gameOverEl = document.getElementById("gameOver");
+
+function resetGame() {
+  arena = createMatrix(cols, rows);
+  player = { pos: {x: 0, y: 0}, matrix: null };
+  score = 0;
+  level = 1;
+  dropInterval = 500;
+  scoreEl.textContent = score;
+  levelEl.textContent = level;
+  gameOverEl.style.display = "none";
+  playerReset();
+}
 
 function drawMatrix(matrix, offset) {
   matrix.forEach((row, y) => {
@@ -90,8 +122,8 @@ function collide(arena, player) {
   for (let y = 0; y < m.length; y++) {
     for (let x = 0; x < m[y].length; x++) {
       if (m[y][x] !== 0 &&
-         (arena[y + o.y] &&
-          arena[y + o.y][x + o.x]) !== 0) {
+        (arena[y + o.y] &&
+         arena[y + o.y][x + o.x]) !== 0) {
         return true;
       }
     }
@@ -115,17 +147,8 @@ function rotate(matrix) {
   );
 }
 
-function playerReset() {
-  player.matrix = shapes[Math.floor(Math.random() * 7) + 1];
-  player.pos.y = 0;
-  player.pos.x = (cols / 2 | 0) - (player.matrix[0].length / 2 | 0);
-
-  if (collide(arena, player)) {
-    arena.forEach(row => row.fill(0));
-  }
-}
-
 function arenaSweep() {
+  let lines = 0;
   outer: for (let y = arena.length - 1; y >= 0; y--) {
     for (let x = 0; x < arena[y].length; x++) {
       if (arena[y][x] === 0) continue outer;
@@ -133,6 +156,27 @@ function arenaSweep() {
     arena.splice(y, 1);
     arena.unshift(Array(cols).fill(0));
     y++;
+    lines++;
+  }
+
+  if (lines > 0) {
+    score += lines * 100;
+    level = Math.floor(score / 500) + 1;
+    dropInterval = Math.max(100, 500 - (level - 1) * 50);
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+  }
+}
+
+function playerReset() {
+  player.matrix = shapes[Math.floor(Math.random() * 7) + 1];
+  player.pos.y = 0;
+  player.pos.x = (cols / 2 | 0) - (player.matrix[0].length / 2 | 0);
+
+  if (collide(arena, player)) {
+    running = false;
+    gameOverEl.style.display = "block";
+    document.getElementById("restartBtn").style.display = "inline-block";
   }
 }
 
@@ -147,6 +191,7 @@ function playerDrop() {
 }
 
 document.addEventListener("keydown", e => {
+  if (!running) return;
   if (e.key === "ArrowLeft") player.pos.x--;
   if (e.key === "ArrowRight") player.pos.x++;
   if (e.key === "ArrowDown") playerDrop();
@@ -162,9 +207,9 @@ document.addEventListener("keydown", e => {
   }
 });
 
-let lastTime = 0;
 function update(time = 0) {
-  if (time - lastTime > 500) {
+  if (!running) return;
+  if (time - lastTime > dropInterval) {
     playerDrop();
     lastTime = time;
   }
@@ -172,10 +217,18 @@ function update(time = 0) {
   requestAnimationFrame(update);
 }
 
-playerReset();
-update();
+document.getElementById("startBtn").onclick = () => {
+  resetGame();
+  running = true;
+  update();
+};
+
+document.getElementById("restartBtn").onclick = () => {
+  resetGame();
+  running = true;
+  update();
+};
 </script>
 
 </body>
 </html>
-        
