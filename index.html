@@ -1,555 +1,310 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>✨俄羅斯方塊✨</title>
+    <title>🌈 彩色貪食蛇 - Slither.io風格</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            height: 100vh; overflow: hidden; 
+            background: radial-gradient(circle at center, #1a237e 0%, #0d47a1 50%, #000 100%);
+            font-family: 'Arial Black', Arial; color: white; user-select: none;
+            display: flex; justify-content: center; align-items: center;
         }
-        
-        body {
-            font-family: 'Nunito', sans-serif;
-            background: linear-gradient(135deg, #ffeef8, #e8f4fd);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+        .ui { position: absolute; z-index: 100; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        .score { top: 20px; left: 20px; font-size: 24px; }
+        .top-right { top: 20px; right: 20px; font-size: 20px; }
+        canvas { 
+            border-radius: 10px; box-shadow: 0 0 50px rgba(0,255,255,0.3);
+            background: radial-gradient(circle, #667eea22 0%, #764ba222 70%, transparent);
+            max-width: 95vw; max-height: 95vh;
         }
-        
-        .game-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 30px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
+        .menu { 
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(20px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 30px;
         }
-        
-        h1 {
-            color: #ff6b9d;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; }
+        .color-btn { 
+            width: 60px; height: 60px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.3);
+            cursor: pointer; transition: all 0.3s; position: relative;
         }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            font-size: 1.3em;
-            font-weight: 700;
+        .color-btn:hover { transform: scale(1.2); filter: brightness(1.3); }
+        .color-btn.selected { border-color: white; box-shadow: 0 0 20px white; }
+        .color-btn::after { content: attr(data-name); position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; white-space: nowrap; }
+        h1 { font-size: 48px; background: linear-gradient(45deg, #00f5ff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        button { 
+            padding: 15px 40px; font-size: 20px; font-weight: bold; border: none; border-radius: 25px;
+            background: linear-gradient(45deg, #00f5ff, #0099cc); color: #000; cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,245,255,0.4);
         }
-        
-        .stat {
-            color: #4ecdc4;
-        }
-        
-        .level {
-            color: #ffeaa7;
-        }
-        
-        canvas {
-            border: 5px solid #fff;
-            border-radius: 20px;
-            background: linear-gradient(180deg, #f8f9ff 0%, #fff 100%);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: block;
-            margin: 0 auto 20px;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        button {
-            background: linear-gradient(45deg, #ff9a9e, #fecfef);
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1em;
-            font-weight: 700;
-            color: white;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255,107,157,0.4);
-            font-family: 'Nunito', sans-serif;
-        }
-        
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(255,107,157,0.6);
-        }
-        
-        button:active {
-            transform: translateY(-1px);
-        }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .warning-light {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: #ffeaa7;
-            box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
-            opacity: 0;
-            transition: all 0.3s ease;
-            animation: none;
-        }
-        
-        .warning-light.danger {
-            background: #ff7675;
-            box-shadow: 0 0 30px rgba(255, 118, 117, 0.8);
-            opacity: 1;
-            animation: pulse 0.6s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        
-        .instructions {
-            margin-top: 20px;
-            color: #636e72;
-            font-size: 0.9em;
-            line-height: 1.5;
-        }
-        
-        .game-over {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255,255,255,0.95);
-            padding: 40px;
-            border-radius: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            display: none;
-        }
-        
-        .game-over h2 {
-            color: #ff6b9d;
-            margin-bottom: 20px;
-            font-size: 2em;
-        }
-        
-        .final-stats {
-            font-size: 1.3em;
-            color: #4ecdc4;
-            margin: 20px 0;
-            font-weight: 700;
-        }
+        button:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,245,255,0.6); }
     </style>
 </head>
 <body>
-    <div class="warning-light" id="warningLight"></div>
-    
-    <div class="game-container">
-        <h1>👻俄羅斯方塊👻</h1>        
-        <div class="stats">
-            <div class="stat">分數: <span id="score">0</span></div>
-            <div class="stat">行數: <span id="lines">0</span></div>
-            <div class="level">等級: <span id="level">1</span></div>
-        </div>
-        <canvas id="gameCanvas" width="300" height="500"></canvas>
-        <div class="controls">
-            <button id="startBtn">🎮 開始遊戲</button>
-            <button id="nextGameBtn" disabled>🔄 下一局</button>
-        </div>
-        <div class="instructions">
-            <strong>電腦鍵盤控制：</strong><br>
-            ← → 左右移動 | ↓ 軟掉落 | ↑ 旋轉 | <strong>Enter 硬掉落</strong>
-        </div>
+    <div class="ui score">🐍 <span id="score">0</span></div>
+    <div class="ui top-right">
+        <div>長度: <span id="length">5</span></div>
+        <div>速度: <span id="speed">1x</span></div>
     </div>
-    
-    <div class="game-over" id="gameOverScreen">
-        <h2>🎉 遊戲結束！</h2>
-        <div class="final-stats">
-            最終分數: <span id="finalScore">0</span><br>
-            總行數: <span id="finalLines">0</span><br>
-            最高等級: <span id="finalLevel">1</span>
-        </div>
-        <button id="playAgainBtn">再玩一次！</button>
+
+    <div class="menu" id="menu">
+        <h1>🌈 彩色蛇王</h1>
+        <div class="color-grid" id="colorGrid"></div>
+        <button onclick="startGame()">🚀 開始遊戲</button>
     </div>
+
+    <canvas id="canvas"></canvas>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
         const scoreEl = document.getElementById('score');
-        const linesEl = document.getElementById('lines');
-        const levelEl = document.getElementById('level');
-        const finalScoreEl = document.getElementById('finalScore');
-        const finalLinesEl = document.getElementById('finalLines');
-        const finalLevelEl = document.getElementById('finalLevel');
-        const startBtn = document.getElementById('startBtn');
-        const nextGameBtn = document.getElementById('nextGameBtn');
-        const warningLight = document.getElementById('warningLight');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const playAgainBtn = document.getElementById('playAgainBtn');
+        const lengthEl = document.getElementById('length');
+        const speedEl = document.getElementById('speed');
 
-        // 遊戲設定
-        const ROWS = 20;
-        const COLS = 10;
-        const BLOCK_SIZE = 25;
-        const COLORS = [
-            '#ffafcc', '#a8e6cf', '#ffd93d', '#ff6b9d',
-            '#4ecdc4', '#45b7d1', '#f9ca24', '#f7dc6f'
+        // 響應式畫布
+        function resizeCanvas() {
+            canvas.width = Math.min(window.innerWidth * 0.9, 800);
+            canvas.height = Math.min(window.innerHeight * 0.9, 600);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const gridSize = 20;
+        let snake = [{x: 10, y: 10}];
+        let food = {}; let particles = [];
+        let dx = 0, dy = 0, score = 0, gameSpeed = 150;
+        let gameRunning = false, snakeColor = '#00ff88';
+
+        // 16種炫酷漸變顏色
+        const colors = [
+            {name:'翠綠', color: '#00ff88'},
+            {name:'電紫', color: '#aa00ff'},
+            {name:'烈焰', color: '#ff4444'},
+            {name:'海洋', color: '#00ccff'},
+            {name:'金黃', color: '#ffd700'},
+            {name:'粉紅', color: '#ff69b4'},
+            {name:'冰藍', color: '#00bfff'},
+            {name:'橘紅', color: '#ff8c00'},
+            {name:'薄荷', color: '#98fb98'},
+            {name:'靛藍', color: '#4b0082'},
+            {name:'櫻花', color: '#ffb6c1'},
+            {name:'萊姆', color: '#32cd32'},
+            {name:'霓虹', color: '#ff1493'},
+            {name:'天青', color: '#20b2aa'},
+            {name:'薰衣', color: '#dda0dd'},
+            {name:'夜光', color: '#00ffff'}
         ];
 
-        const TETROMINOS = {
-            I: [[[1,1,1,1]], [[1],[1],[1],[1]]],
-            O: [[[1,1],[1,1]]],
-            T: [[[0,1,0],[1,1,1]], [[1,0],[1,1],[1,0]], [[1,1,1],[0,1,0]], [[0,1],[1,1],[0,1]]],
-            S: [[[0,1,1],[1,1,0]], [[1,0],[1,1],[0,1]]],
-            Z: [[[1,1,0],[0,1,1]], [[0,1],[1,1],[1,0]]],
-            J: [[[1,0,0],[1,1,1]], [[1,1],[1,0],[1,0]], [[1,1,1],[0,0,1]], [[0,1],[0,1],[1,1]]],
-            L: [[[0,0,1],[1,1,1]], [[1,0],[1,0],[1,1]], [[1,1,1],[1,0,0]], [[1,1],[0,1],[0,1]]]
-        };
-
-        let board = [];
-        let currentPiece = null;
-        let score = 0;
-        let lines = 0;
-        let level = 1;
-        let dropTime = 0;
-        let dropInterval = 800;
-        let gameRunning = false;
-        let gameOver = false;
-        let lastTime = 0;
-
-        // 初始化遊戲板
-        function initBoard() {
-            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        // 建立顏色選單
+        const colorGrid = document.getElementById('colorGrid');
+        colors.forEach((color, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'color-btn';
+            btn.style.background = `linear-gradient(45deg, ${color.color}, ${adjustBrightness(color.color, 0.7)})`;
+            btn.dataset.color = color.color;
+            btn.dataset.name = color.name;
+            btn.onclick = () => selectColor(i);
+            colorGrid.appendChild(btn);
+        });
+        function selectColor(index) {
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelectorAll('.color-btn')[index].classList.add('selected');
+            snakeColor = colors[index].color;
         }
 
-        // 隨機生成方塊
-        function createPiece() {
-            const types = Object.keys(TETROMINOS);
-            const type = types[Math.floor(Math.random() * types.length)];
-            return {
-                x: Math.floor(COLS / 2) - 1,
-                y: 0,
-                shape: TETROMINOS[type],
-                rotation: 0,
-                color: COLORS[Math.floor(Math.random() * COLORS.length)],
-                type: type
+        function adjustBrightness(hex, factor) {
+            const r = Math.floor(parseInt(hex.slice(1,3),16) * factor);
+            const g = Math.floor(parseInt(hex.slice(3,5),16) * factor);
+            const b = Math.floor(parseInt(hex.slice(5,7),16) * factor);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        function startGame() {
+            menu.style.display = 'none';
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function randomFood() {
+            food = {
+                x: Math.floor(Math.random() * (canvas.width / gridSize)),
+                y: Math.floor(Math.random() * (canvas.height / gridSize))
             };
         }
 
-        // 繪製單個方塊
-        function drawBlock(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 7, BLOCK_SIZE - 7);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        function createParticles(x, y) {
+            for(let i = 0; i < 8; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    life: 30,
+                    color: snakeColor
+                });
+            }
         }
 
-        // 繪製遊戲板
-        function drawBoard() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 背景網格
-            ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx; p.y += p.vy; p.life--;
+                p.vx *= 0.95; p.vy *= 0.95;
+                return p.life > 0;
+            });
+        }
+
+        function drawBackground() {
+            const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)/2);
+            gradient.addColorStop(0, 'rgba(255,255,255,0.1)');
+            gradient.addColorStop(0.5, 'rgba(0,150,255,0.05)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 網格線
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
             ctx.lineWidth = 1;
-            for (let i = 0; i <= COLS; i++) {
+            for(let i = 0; i < canvas.width; i += gridSize) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+        }
+
+        function drawSnake() {
+            snake.forEach((segment, i) => {
+                const x = segment.x * gridSize;
+                const y = segment.y * gridSize;
+                const size = i === 0 ? gridSize * 0.9 : gridSize * 0.8;
+                const glowSize = i === 0 ? gridSize * 1.2 : gridSize;
+
+                // 蛇身發光
+                ctx.shadowColor = snakeColor;
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = i === 0 ? snakeColor : adjustBrightness(snakeColor, 0.7);
                 ctx.beginPath();
-                ctx.moveTo(i * BLOCK_SIZE, 0);
-                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
-                ctx.stroke();
-            }
-            for (let i = 0; i <= ROWS; i++) {
+                ctx.arc(x + gridSize/2, y + gridSize/2, size/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function drawFood() {
+            const fx = food.x * gridSize + gridSize/2;
+            const fy = food.y * gridSize + gridSize/2;
+            ctx.shadowColor = '#ff4444';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#ff6666';
+            ctx.beginPath();
+            ctx.arc(fx, fy, gridSize/3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life / 30;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = p.color;
                 ctx.beginPath();
-                ctx.moveTo(0, i * BLOCK_SIZE);
-                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
-                ctx.stroke();
-            }
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function moveSnake() {
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
             
-            // 已固定方塊
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c]) {
-                        drawBlock(c, r, board[r][c]);
-                    }
+            // 邊界包裝
+            if (head.x < 0) head.x = Math.floor(canvas.width / gridSize) - 1;
+            if (head.x >= canvas.width / gridSize) head.x = 0;
+            if (head.y < 0) head.y = Math.floor(canvas.height / gridSize) - 1;
+            if (head.y >= canvas.height / gridSize) head.y = 0;
+
+            // 碰撞檢測
+            for(let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                    return;
                 }
             }
+
+            snake.unshift(head);
             
-            // 當前方塊
-            if (currentPiece) {
-                const shape = currentPiece.shape[currentPiece.rotation % currentPiece.shape.length];
-                for (let r = 0; r < shape.length; r++) {
-                    for (let c = 0; c < shape[r].length; c++) {
-                        if (shape[r][c]) {
-                            drawBlock(currentPiece.x + c, currentPiece.y + r, currentPiece.color);
-                        }
-                    }
-                }
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                lengthEl.textContent = snake.length;
+                speedEl.textContent = `${Math.floor(snake.length/10)}x`;
+                gameSpeed = Math.max(80, 150 - snake.length * 2);
+                scoreEl.textContent = score;
+                createParticles(food.x * gridSize, food.y * gridSize);
+                randomFood();
+            } else {
+                snake.pop();
             }
         }
 
-        // 檢查碰撞
-        function collides(piece) {
-            const shape = piece.shape[piece.rotation % piece.shape.length];
-            for (let r = 0; r < shape.length; r++) {
-                for (let c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c]) {
-                        const newX = piece.x + c;
-                        const newY = piece.y + r;
-                        
-                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
-                        if (newY < 0) continue;
-                        if (board[newY][newX]) return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        // 合併方塊
-        function merge() {
-            const shape = currentPiece.shape[currentPiece.rotation % currentPiece.shape.length];
-            for (let r = 0; r < shape.length; r++) {
-                for (let c = 0; c < shape[r].length; c++) {
-                    if (shape[r][c]) {
-                        const newX = currentPiece.x + c;
-                        const newY = currentPiece.y + r;
-                        if (newY >= 0) {
-                            board[newY][newX] = currentPiece.color;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 清除完整行 + 等級系統
-        function clearLines() {
-            let linesCleared = 0;
-            outer: for (let r = ROWS - 1; r >= 0; r--) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c] === 0) continue outer;
-                }
-                board.splice(r, 1);
-                board.unshift(Array(COLS).fill(0));
-                linesCleared++;
-                r++;
-            }
-            
-            if (linesCleared > 0) {
-                lines += linesCleared;
-                score += linesCleared * 100 * level;
-                
-                // 每破5行升一級
-                const newLevel = Math.floor(lines / 5) + 1;
-                if (newLevel > level) {
-                    level = newLevel;
-                    // 等級越高速度越快
-                    dropInterval = Math.max(100, 800 - (level - 1) * 80);
-                }
-                
-                updateDisplay();
-            }
-        }
-
-        // 更新顯示
-        function updateDisplay() {
-            scoreEl.textContent = score;
-            linesEl.textContent = lines;
-            levelEl.textContent = level;
-        }
-
-        // 檢查危險狀態
-        function checkDanger() {
-            for (let c = 0; c < COLS; c++) {
-                for (let r = 0; r < 3; r++) {
-                    if (board[r][c]) {
-                        warningLight.classList.add('danger');
-                        return;
-                    }
-                }
-            }
-            warningLight.classList.remove('danger');
-        }
-
-        // 遊戲主循環
-        function update(time = 0) {
-            if (!gameRunning || gameOver) return;
-            
-            const deltaTime = time - dropTime;
-            if (deltaTime > dropInterval) {
-                dropTime = time;
-                currentPiece.y++;
-                if (collides(currentPiece)) {
-                    currentPiece.y--;
-                    merge();
-                    clearLines();
-                    currentPiece = createPiece();
-                    if (collides(currentPiece)) {
-                        gameOver = true;
-                        gameRunning = false;
-                        finalScoreEl.textContent = score;
-                        finalLinesEl.textContent = lines;
-                        finalLevelEl.textContent = level;
-                        gameOverScreen.style.display = 'block';
-                        nextGameBtn.disabled = false;
-                        startBtn.textContent = '🎮 新遊戲';
-                        warningLight.classList.remove('danger');
-                        return;
-                    }
-                }
-                checkDanger();
-            }
-            
-            drawBoard();
-            lastTime = time;
-            requestAnimationFrame(update);
-        }
-
-        // 旋轉
-        function rotate() {
-            if (!currentPiece || gameOver) return;
-            const oldRotation = currentPiece.rotation;
-            currentPiece.rotation = (currentPiece.rotation + 1) % currentPiece.shape.length;
-            if (collides(currentPiece)) {
-                currentPiece.rotation = oldRotation;
-            }
-            drawBoard();
-        }
-
-        // 移動
-        function move(dx) {
-            if (!currentPiece || gameOver) return;
-            currentPiece.x += dx;
-            if (collides(currentPiece)) {
-                currentPiece.x -= dx;
-            }
-            drawBoard();
-        }
-
-        // 軟掉落
-        function softDrop() {
-            if (!currentPiece || gameOver) return;
-            currentPiece.y++;
-            if (collides(currentPiece)) {
-                currentPiece.y--;
-            }
-            drawBoard();
-        }
-
-        // 硬掉落
-        function hardDrop() {
-            if (!currentPiece || gameOver) return;
-            while (!collides(currentPiece)) {
-                currentPiece.y++;
-            }
-            currentPiece.y--;
-            merge();
-            clearLines();
-            currentPiece = createPiece();
-            if (collides(currentPiece)) {
-                gameOver = true;
-                gameRunning = false;
-                finalScoreEl.textContent = score;
-                finalLinesEl.textContent = lines;
-                finalLevelEl.textContent = level;
-                gameOverScreen.style.display = 'block';
-                nextGameBtn.disabled = false;
-                startBtn.textContent = '🎮 新遊戲';
-                return;
-            }
-            checkDanger();
-            drawBoard();
-        }
-
-        // 鍵盤控制
-        document.addEventListener('keydown', (e) => {
-            if (gameOverScreen.style.display === 'block') {
-                e.preventDefault();
-                return;
-            }
-            
-            e.preventDefault();
-            switch(e.code) {
-                case 'ArrowLeft': move(-1); break;
-                case 'ArrowRight': move(1); break;
-                case 'ArrowDown': softDrop(); break;
-                case 'ArrowUp': rotate(); break;
-                case 'Enter':
-                case 'NumpadEnter': hardDrop(); break;
-            }
-        });
-
-        // 遊戲控制
-        startBtn.addEventListener('click', () => {
-            if (gameOver) {
-                nextGame();
-                return;
-            }
-            initBoard();
-            score = 0;
-            lines = 0;
-            level = 1;
-            dropInterval = 800;
-            gameRunning = true;
-            gameOver = false;
-            gameOverScreen.style.display = 'none';
-            startBtn.textContent = '🎮 開始遊戲';
-            nextGameBtn.disabled = true;
-            currentPiece = createPiece();
-            warningLight.classList.remove('danger');
-            dropTime = performance.now();
-            updateDisplay();
-            requestAnimationFrame(update);
-        });
-
-        nextGameBtn.addEventListener('click', () => {
-            nextGame();
-        });
-
-        playAgainBtn.addEventListener('click', () => {
-            nextGame();
-        });
-
-        function nextGame() {
-            initBoard();
-            score = 0;
-            lines = 0;
-            level = 1;
-            dropInterval = 800;
+        function gameOver() {
             gameRunning = false;
-            gameOver = false;
-            gameOverScreen.style.display = 'none';
-            startBtn.textContent = '🎮 開始遊戲';
-            nextGameBtn.disabled = true;
-            updateDisplay();
-            drawBoard();
-            warningLight.classList.remove('danger');
+            setTimeout(() => {
+                menu.style.display = 'flex';
+                document.querySelector('.color-btn').click(); // 預選第一個顏色
+            }, 500);
         }
 
-        // 初始化
-        initBoard();
-        updateDisplay();
-        drawBoard();
+        function gameLoop() {
+            const interval = setInterval(() => {
+                if (gameRunning) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawBackground();
+                    updateParticles();
+                    moveSnake();
+                    drawParticles();
+                    drawFood();
+                    drawSnake();
+                } else {
+                    clearInterval(interval);
+                }
+            }, gameSpeed);
+        }
+
+        // 控制
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+            const goingRight = dx === 1, goingLeft = dx === -1;
+            const goingDown = dy === 1, goingUp = dy === -1;
+            
+            if (e.keyCode === LEFT && !goingRight) { dx = -1; dy = 0; }
+            if (e.keyCode === UP && !goingDown) { dx = 0; dy = -1; }
+            if (e.keyCode === RIGHT && !goingLeft) { dx = 1; dy = 0; }
+            if (e.keyCode === DOWN && !goingUp) { dx = 0; dy = 1; }
+        });
+
+        // 觸控控制
+        let touchStartX, touchStartY;
+        canvas.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        canvas.addEventListener('touchend', e => {
+            if (!gameRunning || !touchStartX) return;
+            const deltaX = e.changedTouches[0].clientX - touchStartX;
+            const deltaY = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+                dx = deltaX > 0 ? 1 : -1; dy = 0;
+            } else if (Math.abs(deltaY) > 30) {
+                dy = deltaY > 0 ? 1 : -1; dx = 0;
+            }
+            touchStartX = touchStartY = null;
+        });
+
+        randomFood();
+        selectColor(0); // 預設綠色
     </script>
 </body>
 </html>
