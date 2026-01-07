@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>霓虹俄羅斯方塊 - 手機電腦完美版</title>
+    <title>慢速俄羅斯方塊 - 升級版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,237 +14,211 @@
             align-items: center; 
             font-family: Arial, sans-serif;
             color: white;
-            touch-action: none;
-            user-select: none;
         }
         canvas { 
             border: 3px solid #444; 
-            box-shadow: 0 0 30px rgba(0,255,255,0.3);
-            max-width: 90vw; max-height: 80vh;
-            width: 300px; height: 600px;
+            background: #000;
+            box-shadow: 0 0 20px #00ffff;
         }
-        .ui {
-            position: absolute; 
-            top: 20px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            text-align: center;
-            font-size: clamp(18px, 4vw, 24px); 
-            text-shadow: 0 0 10px cyan;
-            z-index: 10;
+        .info {
+            display: flex; gap: 30px; margin-top: 20px; font-size: 20px;
         }
-        .controls {
-            position: fixed; bottom: 20px; left: 50%;
-            transform: translateX(-50%);
-            display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 10px; max-width: 300px; width: 90vw;
+        .level-up {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 4em; font-weight: bold; color: #ffff00; text-shadow: 0 0 20px #ffff00;
+            display: none; z-index: 1000; pointer-events: none;
+            animation: pulse 1s infinite;
         }
-        .btn {
-            aspect-ratio: 1; border: none;
-            background: rgba(0,255,255,0.2);
-            color: white; font-size: clamp(18px, 5vw, 24px);
-            border-radius: 10px; backdrop-filter: blur(10px);
-            touch-action: manipulation;
-        }
-        .btn:active { background: rgba(0,255,255,0.5); transform: scale(0.95); }
-        .rotate { grid-column: 2; }
-        .left { grid-column: 1; }
-        .right { grid-column: 3; }
-        .down { grid-row: 2; grid-column: 2; }
-        #gameOver {
-            display: none; position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; background: rgba(0,0,0,0.9);
-            color: white; z-index: 1000; text-align: center; 
-            padding-top: 30%; font-size: clamp(1.5em, 6vw, 3em);
-        }
-        #crisis-alert {
-            display: none; position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; background: rgba(255,0,0,0.95);
-            color: white; z-index: 99999; text-align: center; 
-            padding-top: 25%; font-size: clamp(1.5em, 5vw, 3em);
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.2); }
         }
     </style>
 </head>
 <body>
-    <div class="ui">
-        分數: <span id="score">0</span> | 最高分: <span id="highScore">0</span>
-    </div>
     <canvas id="game" width="300" height="600"></canvas>
-    
-    <div class="controls">
-        <button class="btn left" ontouchstart="move(-1)">←</button>
-        <button class="btn rotate" ontouchstart="rotate()">↻</button>
-        <button class="btn right" ontouchstart="move(1)">→</button>
-        <button class="btn down" ontouchstart="drop()">↓</button>
+    <div class="info">
+        <div>分數: <span id="score">0</span></div>
+        <div>等級: <span id="level">1</span> (破<span id="linesNeeded">5</span>行)</div>
     </div>
-
-    <div id="gameOver">
-        <h1>🎮 遊戲結束 🎮</h1>
-        <p>最終分數: <span id="finalScore">0</span></p>
-        <button onclick="restart()" style="padding:15px 30px;font-size:1.2em;margin:10px;">再玩一次</button>
-        <br><button onclick="closeGameOver()" style="padding:10px 20px;">暫停</button>
-    </div>
-
-    <div id="crisis-alert">
-        <h1>🚨 危機警告 🚨</h1>
-        <p>偵測到緊急事件，請注意安全！</p>
-        <button onclick="location.reload()" style="padding:15px 30px;font-size:1.2em;">繼續遊戲</button>
-    </div>
+    <div id="levelUp" class="level-up">LEVEL UP!</div>
 
     <script>
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const highScoreEl = document.getElementById('highScore');
-        const gameOverEl = document.getElementById('gameOver');
-        const finalScoreEl = document.getElementById('finalScore');
+        const grid = 30;
+        let board = Array(20).fill().map(() => Array(10).fill(0));
+        let score = 0, level = 1, linesCleared = 0, linesNeeded = 5;
+        
+        const tetrominos = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+        const colors = ['#00ffff', '#ffff00', '#aa00ff', '#00ff00', '#ff0000', '#0000ff', '#ff8800'];
 
-        // 霓虹漸變方塊（跟你圖片完全一樣）
-        const tetrominoes = {
-            'I': { color: ['#00f0ff','#00b8ff','#0080ff'], shape: [[1,1,1,1]] },
-            'O': { color: ['#fff700','#ffeb3b','#ffd600'], shape: [[1,1],[1,1]] },
-            'T': { color: ['#b300ff','#9c27b0','#7b1fa2'], shape: [[0,1,0],[1,1,1]] },
-            'S': { color: ['#00ff88','#00e676','#00c853'], shape: [[0,1,1],[1,1,0]] },
-            'Z': { color: ['#ff4444','#f44336','#d32f2f'], shape: [[1,1,0],[0,1,1]] },
-            'J': { color: ['#4488ff','#2196f3','#1976d2'], shape: [[1,0,0],[1,1,1]] },
-            'L': { color: ['#ffaa00','#ff9800','#f57c00'], shape: [[0,0,1],[1,1,1]] }
+        let current = {
+            shape: tetrominos[Math.floor(Math.random() * 7)],
+            color: Math.floor(Math.random() * 7),
+            x: 3, y: 0
         };
 
-        let board = Array(20).fill().map(() => Array(10).fill(0));
-        let current = { x: 3, y: 0, type: getRandomTetromino() };
-        let score = 0, highScore = localStorage.getItem('tetrisHighScore') || 0;
-        let dropTime = 0, DROP_INTERVAL = 500, gameRunning = true;
-        let touchStartX, touchStartY;
+        let dropTime = 0;
+        const dropSpeed = [1000, 900, 800, 700, 600]; // 慢慢掉落，每級略加速
 
-        highScoreEl.textContent = highScore;
-
-        function getRandomTetromino() {
-            const types = Object.keys(tetrominoes);
-            return { type: types[Math.floor(Math.random() * types.length)], rotation: 0 };
-        }
-
-        function drawBlock(x, y, colors) {
-            ctx.save();
-            const gradient = ctx.createLinearGradient(x*30, y*30, x*30+30, y*30+30);
-            gradient.addColorStop(0, colors[0]); gradient.addColorStop(0.5, colors[1]); gradient.addColorStop(1, colors[2]);
-            ctx.fillStyle = gradient; ctx.shadowColor = colors[0]; ctx.shadowBlur = 15;
-            ctx.fillRect(x*30, y*30, 30, 30); ctx.shadowBlur = 0;
-            ctx.strokeStyle = colors[0]; ctx.lineWidth = 2; ctx.strokeRect(x*30+1, y*30+1, 28, 28);
-            ctx.restore();
-        }
-
+        // 繪製
         function draw() {
-            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 300, 600);
-            for (let y = 0; y < 20; y++) for (let x = 0; x < 10; x++) 
-                if (board[y][x]) drawBlock(x, y, tetrominoes[board[y][x]].color);
-            const piece = tetrominoes[current.type.type];
-            for (let py = 0; py < piece.shape.length; py++) for (let px = 0; px < piece.shape[py].length; px++)
-                if (piece.shape[py][px]) drawBlock(current.x + px, current.y + py, piece.color);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 棋盤
+            for(let r=0; r<20; r++) {
+                for(let c=0; c<10; c++) {
+                    if(board[r][c]) {
+                        ctx.fillStyle = colors[board[r][c]-1];
+                        ctx.fillRect(c*grid, r*grid, grid-1, grid-1);
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(c*grid, r*grid, grid-1, grid-1);
+                    }
+                }
+            }
+            
+            // 當前行塊
+            current.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if(value) {
+                        ctx.fillStyle = colors[current.color];
+                        ctx.fillRect((current.x+dx)*grid, (current.y+dy)*grid, grid-1, grid-1);
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect((current.x+dx)*grid, (current.y+dy)*grid, grid-1, grid-1);
+                    }
+                });
+            });
         }
 
-        function collide(dx=0, dy=0) {
-            const piece = tetrominoes[current.type.type].shape;
-            for (let y = 0; y < piece.length; y++) for (let x = 0; x < piece[y].length; x++)
-                if (piece[y][x]) {
-                    const newX = current.x + x + dx, newY = current.y + y + dy;
-                    if (newX < 0 || newX >= 10 || newY >= 20 || (newY >= 0 && board[newY][newX])) return true;
+        // 碰撞偵測
+        function collide() {
+            for(let y=0; y<current.shape.length; y++) {
+                for(let x=0; x<current.shape[y].length; x++) {
+                    if(current.shape[y][x] && 
+                       (current.y + y >= 20 || current.x + x < 0 || current.x + x >= 10 || 
+                        (current.y + y >= 0 && board[current.y + y]?.[current.x + x]))) {
+                        return true;
+                    }
                 }
+            }
             return false;
         }
 
+        // 合併方塊
         function merge() {
-            const piece = tetrominoes[current.type.type].shape;
-            for (let y = 0; y < piece.length; y++) for (let x = 0; x < piece[y].length; x++)
-                if (piece[y][x]) board[current.y + y][current.x + x] = current.type.type;
+            current.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if(value) board[current.y + y][current.x + x] = current.color + 1;
+                });
+            });
         }
 
+        // 清除行
         function clearLines() {
-            for (let y = 19; y >= 0; y--) if (board[y].every(cell => cell !== 0)) {
-                board.splice(y, 1); board.unshift(Array(10).fill(0)); score += 100; y++;
+            let lines = 0;
+            for(let r=19; r>=0; r--) {
+                if(board[r].every(cell => cell !== 0)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(10).fill(0));
+                    lines++;
+                    r++; // 重新檢查這行
+                }
             }
-            scoreEl.textContent = score;
-            if (score > highScore) {
-                highScore = score; highScoreEl.textContent = highScore;
-                localStorage.setItem('tetrisHighScore', highScore);
+            if(lines > 0) {
+                linesCleared += lines;
+                score += lines * 100 * level;
+                document.getElementById('score').textContent = score;
+                
+                if(linesCleared >= linesNeeded) {
+                    levelUp();
+                } else {
+                    document.getElementById('linesNeeded').textContent = linesNeeded - linesCleared;
+                }
             }
         }
 
-        function rotate() {
-            const piece = tetrominoes[current.type.type];
-            const rotated = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
-            const prevShape = piece.shape; piece.shape = rotated;
-            if (collide()) piece.shape = prevShape;
+        // 升級動畫
+        function levelUp() {
+            level++;
+            linesCleared = 0;
+            linesNeeded = 5; // 固定每5行升級
+            
+            const levelUpDiv = document.getElementById('levelUp');
+            levelUpDiv.style.display = 'block';
+            document.getElementById('level').textContent = level;
+            document.getElementById('linesNeeded').textContent = linesNeeded;
+            
+            setTimeout(() => {
+                levelUpDiv.style.display = 'none';
+            }, 2000);
         }
 
-        function gameOver() {
-            gameRunning = false;
-            finalScoreEl.textContent = score;
-            gameOverEl.style.display = 'block';
+        // 新方塊
+        function nextTetromino() {
+            current.shape = tetrominos[Math.floor(Math.random() * 7)];
+            current.color = Math.floor(Math.random() * 7);
+            current.x = 3;
+            current.y = 0;
+            if(collide()) {
+                board = Array(20).fill().map(() => Array(10).fill(0));
+                score = 0; level = 1; linesCleared = 0; linesNeeded = 5;
+                document.getElementById('score').textContent = score;
+                document.getElementById('level').textContent = level;
+                document.getElementById('linesNeeded').textContent = linesNeeded;
+            }
         }
 
-        function restart() {
-            board = Array(20).fill().map(() => Array(10).fill(0));
-            current = getRandomTetromino(); score = 0; dropTime = 0; gameRunning = true;
-            scoreEl.textContent = score; gameOverEl.style.display = 'none';
+        // 更新
+        function update(time = 0) {
+            dropTime += time - (dropTime || time);
+            if(dropTime > dropSpeed[Math.min(level-1, 4)]) {
+                dropTime = 0;
+                if(!collide()) {
+                    current.y++;
+                } else {
+                    merge();
+                    clearLines();
+                    nextTetromino();
+                }
+            }
+            draw();
+            requestAnimationFrame(update);
         }
 
-        function closeGameOver() {
-            gameOverEl.style.display = 'none';
-        }
-
-        // 電腦鍵盤
+        // 控制（只左右+加速，無旋轉）
         document.addEventListener('keydown', e => {
-            if (!gameRunning) return;
-            if (e.key === 'ArrowLeft' && !collide(-1, 0)) current.x--;
-            if (e.key === 'ArrowRight' && !collide(1, 0)) current.x++;
-            if (e.key === 'ArrowDown' && !collide(0, 1)) current.y++;
-            if (e.key === 'ArrowUp') rotate();
+            if(e.key === 'ArrowLeft' && !collide({x: current.x-1})) current.x--;
+            if(e.key === 'ArrowRight' && !collide({x: current.x+1})) current.x++;
+            if(e.key === 'ArrowDown') current.y++;
         });
 
-        // 手機控制
-        function move(dx) { if (gameRunning && !collide(dx, 0)) current.x += dx; }
-        function drop() { if (gameRunning && !collide(0, 1)) current.y++; }
-
+        // 觸控控制
+        let touchStartX, touchStartY;
         canvas.addEventListener('touchstart', e => {
-            e.preventDefault(); touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         });
         canvas.addEventListener('touchmove', e => {
             e.preventDefault();
-            if (!touchStartX || !gameRunning) return;
-            const deltaX = e.touches[0].clientX - touchStartX;
-            const deltaY = e.touches[0].clientY - touchStartY;
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-                move(deltaX > 0 ? 1 : -1); touchStartX = null;
-            } else if (Math.abs(deltaY) > 30) {
-                drop(); touchStartY = null;
-            }
+            let touchEndX = e.touches[0].clientX;
+            let touchEndY = e.touches[0].clientY;
+            if(touchEndX < touchStartX - 30) current.x = Math.max(0, current.x-1);
+            if(touchEndX > touchStartX + 30) current.x = Math.min(9-current.shape[0].length, current.x+1);
+            if(touchEndY > touchStartY + 30) current.y++;
         });
 
-        // 危機警告
-        function checkCrisis() {
-            fetch('https://api.meteodata.tw/v1/earthquake').then(r=>r.json()).then(data=>{
-                if (data && data.alert) document.getElementById('crisis-alert').style.display = 'block';
-            }).catch(()=>{}); 
-        }
-        setInterval(checkCrisis, 30000); checkCrisis();
-
-        function update(time = 0) {
-            if (!gameRunning) { draw(); requestAnimationFrame(update); return; }
-            
-            dropTime += time - (dropTime || time);
-            if (dropTime > DROP_INTERVAL) {
-                if (!collide(0, 1)) {
-                    current.y++;
-                } else {
-                    current.y--; merge(); clearLines();
-                    current = getRandomTetromino();
-                    if (collide()) gameOver();
-                    dropTime = 0;
-                }
-            }
-            draw(); requestAnimationFrame(update);
-        }
-
+        nextTetromino();
         update();
     </script>
 </body>
